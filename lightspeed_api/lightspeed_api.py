@@ -184,9 +184,29 @@ class Lightspeed(object):
                         break
         return r
 
-    def create(self, source, data, parameters=None):
+    def put(self, source, data, id_=None, parameters=None):
         """
-        Create new object in API with POST.
+        Update object in API using PUT
+        :param source: API Source
+        :param data: PUT Data
+        :param parameters: Optional URL Parameters.
+        :return: JSON Results
+        
+        """
+
+        # Check the bearer token is up to date.
+        self.get_token()
+
+        d = json.dumps(data)
+
+        url = self.build_url(source=source,id_=id_,parameters=parameters)
+
+        r = self.request_bucket("put", url, d)
+        return r
+
+    def post(self, source, data, parameters=None):
+        """
+        Post new object in API with POST.
         :param source: API Source
         :param data: POST Data
         :param parameters: Optional URL Parameters.
@@ -201,25 +221,6 @@ class Lightspeed(object):
         url = self.build_url(source=source,parameters=parameters)
 
         r = self.request_bucket("post", url, d)
-        return r
-
-    def update(self, source, data, id_=None, parameters=None):
-        """
-        Update object in API using PUT
-        :param source: API Source
-        :param data: PUT Data
-        :param parameters: Optional URL Parameters.
-        :return: JSON Results
-        """
-
-        # Check the bearer token is up to date.
-        self.get_token()
-
-        d = json.dumps(data)
-
-        url = self.build_url(source=source,id_=id_,parameters=parameters)
-
-        r = self.request_bucket("put", url, d)
         return r
 
     def delete(self, source,id_=None, parameters=None):
@@ -237,4 +238,33 @@ class Lightspeed(object):
 
         r = self.request_bucket("delete", url)
         return r
+
+    def create(self, source, data, parameters=None):
+        """
+        Preserved for compatability
+        Create new object in API with POST.
+        :param source: API Source
+        :param data: POST Data
+        :param parameters: Optional URL Parameters.
+        :return: JSON Results
+        """
+
+        # Check the bearer token is up to date.
+        return self.post(source=source,data=data,parameters=parameters)
+
+    def update(self, source, data, id_=None, parameters=None):
+        """
+        Preserved for compatability
+        Update object in API using PUT
+        :param source: API Source
+        :param data: PUT Data
+        :param parameters: Optional URL Parameters.
+        :return: JSON Results
+        """
+
+        # Check the bearer token is up to date.
+        return self.put(source=source,data=data,id_=id_,parameters=parameters)
+
+
+    
     

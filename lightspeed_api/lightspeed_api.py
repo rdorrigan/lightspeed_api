@@ -9,7 +9,7 @@ __author__ = "Forrest Beck"
 
 class Lightspeed(object):
 
-    def __init__(self, config):
+    def __init__(self, config,testing=False):
         """
         Creates new Lightspeed object.
         :param config: Specify dictionary with config
@@ -31,6 +31,7 @@ class Lightspeed(object):
         # Create a new session for API calls. This will hold bearer token.
         self.session = requests.Session()
         self.session.headers.update({'Accept': 'application/json'})
+        self.testing = testing
 
     def __repr__(self):
         return "Lightspeed API"
@@ -97,7 +98,8 @@ class Lightspeed(object):
         :param data: post/put data
         :return: results in json
         """
-
+        if self.testing:
+            print(method,url,data)
         if self.rate_limit_bucket_level is not None:
             units_available = float(self.rate_limit_bucket_level.split("/")[1]) - float(self.rate_limit_bucket_level.split("/")[0])
         else:
@@ -118,14 +120,7 @@ class Lightspeed(object):
         try:
             tries = 0
             while tries <= 3:
-                if method == "post":
-                    s = self.session.post(url, data=data)
-                elif method == "put":
-                    s = self.session.put(url, data=data)
-                elif method == "delete":
-                    s = self.session.delete(url)
-                elif method == "get":
-                    s = self.session.get(url)
+                s = self.session.request(method.upper(),url,data=data)
                 # Watch for too many requests status
                 if s.status_code == 429:
                     time.sleep(1)
@@ -143,12 +138,24 @@ class Lightspeed(object):
 
                 return s.json()
             else:
-                return None
+                return s
 
         except requests.exceptions.HTTPError as e:
             return "Error: " + str(e)
 
-    def get(self, source, parameters=None):
+    def build_url(self,source,id_=None,parameters=None,encode=False):
+        if parameters:
+            if encode:
+                url = self.api_url + source + ".json?" + parse.urlencode(parameters, safe=':-')
+            else:
+                url = self.api_url + source + ".json?" + parameters
+        elif id_:
+            url = self.api_url + source + f"/{id_}.json"
+        else:
+            url = self.api_url + source + ".json"
+        return url
+
+    def get(self, source, id_=None, parameters=None):
         """
         Get data from API. Implement pagination.
         :param source: API Source desired
@@ -158,11 +165,7 @@ class Lightspeed(object):
 
         # Check the bearer token is up to date.
         self.get_token()
-
-        if parameters:
-            url = self.api_url + source + ".json?" + parse.urlencode(parameters, safe=':-')
-        else:
-            url = self.api_url + source + ".json"
+        url = self.build_url(source=source,id_=id_,parameters=parameters,encode=True)
 
         r = self.request_bucket("get", url)
 
@@ -195,15 +198,12 @@ class Lightspeed(object):
 
         d = json.dumps(data)
 
-        if parameters:
-            url = self.api_url + source + ".json?" + parameters
-        else:
-            url = self.api_url + source + ".json"
+        url = self.build_url(source=source,parameters=parameters)
 
         r = self.request_bucket("post", url, d)
         return r
 
-    def update(self, source, data, parameters=None):
+    def update(self, source, data, id_=None, parameters=None):
         """
         Update object in API using PUT
         :param source: API Source
@@ -217,15 +217,12 @@ class Lightspeed(object):
 
         d = json.dumps(data)
 
-        if parameters:
-            url = self.api_url + source + ".json?" + parameters
-        else:
-            url = self.api_url + source + ".json"
+        url = self.build_url(source=source,id_=id_,parameters=parameters)
 
         r = self.request_bucket("put", url, d)
         return r
 
-    def delete(self, source, parameters=None):
+    def delete(self, source,id_=None, parameters=None):
         """
         Delete object from API
         :param source: API Source
@@ -236,10 +233,8 @@ class Lightspeed(object):
         # Check the bearer token is up to date.
         self.get_token()
 
-        if parameters:
-            url = self.api_url + source + ".json?" + parameters
-        else:
-            url = self.api_url + source + ".json"
+        url = self.build_url(source=source,id_=id_,parameters=parameters)
 
         r = self.request_bucket("delete", url)
         return r
+    
